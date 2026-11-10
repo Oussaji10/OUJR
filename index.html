@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OUJR - DST Viewer</title>
+<style>
+body{background:#111;color:#fff;font-family:sans-serif;text-align:center;padding:15px}
+h1{color:#ffcc00}
+.box{background:#222;padding:15px;border-radius:15px;margin:10px 0}
+button{background:#ffcc00;border:0;padding:12px 20px;border-radius:10px;font-weight:bold;font-size:16px;width:100%}
+canvas{background:#fff;border-radius:10px;max-width:100%;margin-top:10px}
+.stat{display:inline-block;background:#333;padding:10px 15px;border-radius:10px;margin:5px}
+</style>
+</head>
+<body>
+<h1>OUJR - DST Viewer</h1>
+<p>تطبيق قراءة ملفات الطرز DST</p>
+<div class="box">
+<input type="file" id="file" accept=".dst" style="display:none">
+<button onclick="document.getElementById('file').click()">📂 اختار ملف DST</button>
+<p id="name">حتى ملف ما مختار</p>
+<div>
+<span class="stat">🧵 غرزات: <b id="st">0</b></span>
+<span class="stat">✂️ قصات: <b id="tr">0</b></span>
+<span class="stat">📐 العرض: <b id="w">0</b></span>
+<span class="stat">📐 الطول: <b id="h">0</b></span>
+</div>
+<canvas id="c" width="350" height="350"></canvas>
+</div>
+<p>صايبو Oussaji10 - Dakhla</p>
+<script>
+document.getElementById('file').addEventListener('change', async e=>{
+let f=e.target.files[0]; if(!f) return;
+document.getElementById('name').textContent='الملف: '+f.name;
+let buf=await f.arrayBuffer(); let d=new Uint8Array(buf);
+let x=0,y=0,px=0,py=0,minX=9999,maxX=-9999,minY=9999,maxY=-9999,pts=[],st=0,tr=0;
+for(let i=512;i+2<d.length;i+=3){
+let b0=d[i],b1=d[i+1],b2=d[i+2];
+if(b2==0xF3) break;
+let dx=0,dy=0;
+if(b2&1) dx+=1; if(b2&2) dx-=1; if(b2&4) dx+=9; if(b2&8) dx-=9;
+if(b2&16) dx+=27; if(b2&32) dx-=27; if(b2&64) dy+=27; if(b2&128) dy-=27;
+if(b1&1) dy+=1; if(b1&2) dy-=1; if(b1&4) dy+=9; if(b1&8) dy-=9;
+if(b1&16) dy+=27; if(b1&32) dy-=27; if(b1&64) dx+=81; if(b1&128) dx-=81;
+if(b0&1) dx+=3; if(b0&2) dx-=3; if(b0&4) dx+=27; if(b0&8) dx-=27;
+if(b0&16) dx+=81; if(b0&32) dx-=81;
+if(b0&64) dy+=81; if(b0&128) dy-=81;
+x+=dx; y+=dy;
+let jump=(b2&0xC0)==0xC0; let trim=(b2&0xC0)==0x80;
+if(jump||trim){tr++; pts.push({x,y,jump:true}); px=x; py=y; continue;}
+st++; pts.push({x:px,y:py,x2:x,y2:y}); px=x; py=y;
+minX=Math.min(minX,x); maxX=Math.max(maxX,x); minY=Math.min(minY,y); maxY=Math.max(maxY,y);
+}
+document.getElementById('st').textContent=st;
+document.getElementById('tr').textContent=tr;
+document.getElementById('w').textContent=((maxX-minX)/10).toFixed(1)+' mm';
+document.getElementById('h').textContent=((maxY-minY)/10).toFixed(1)+' mm';
+let cv=document.getElementById('c'),ctx=cv.getContext('2d');
+ctx.clearRect(0,0,350,350); ctx.strokeStyle='#e91e63'; ctx.lineWidth=1.2; ctx.beginPath();
+let sc=Math.min(320/(maxX-minX||1),320/(maxY-minY||1));
+pts.forEach(p=>{if(p.jump) return; ctx.moveTo(175+(p.x-(minX+maxX)/2)*sc,175+(p.y-(minY+maxY)/2)*sc); ctx.lineTo(175+(p.x2-(minX+maxX)/2)*sc,175+(p.y2-(minY+maxY)/2)*sc);});
+ctx.stroke();
+alert('سالينا! لقيت '+st+' غرزة');
+});
+</script>
+</body>
+</html>
